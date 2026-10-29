@@ -1,0 +1,14 @@
+name: AdvancementShare
+version: '${version}'
+description: Shares vanilla advancement progress (criteria) between players
+main: com.sugar_tree.advancementshare.AdvancementShare
+api-version: 1.13
+author: sugar_tree
+commands:
+  advshare:
+    description: AdvancementShare admin command
+    usage: /advshare <reload|sync>
+    permission: advancementshare.admin
+permissions:
+  advancementshare.admin:
+    default: op

@@ -1,0 +1,37 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.sugar_tree'
+version = '1.0-dev'
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'spigotmc-repo'
+        url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+    }
+}
+
+dependencies {
+    // Built against the oldest supported API so the jar runs on Spigot/Paper 1.13+.
+    // The criterion grant events (Paper 1.13.2+, Spigot 26.3+) are hooked by reflection at runtime.
+    compileOnly("org.spigotmc:spigot-api:1.13-R0.1-SNAPSHOT") {
+        // Old bungeecord-chat snapshot is no longer hosted, and this plugin doesn't use it
+        exclude group: 'net.md-5', module: 'bungeecord-chat'
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release.set(8)
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    filteringCharset = 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}

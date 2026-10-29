@@ -1,0 +1,27 @@
+# 공유 단위
+#   server : 서버의 모든 플레이어가 하나의 진행 상황을 공유
+#   team   : 같은 스코어보드 팀(/team)끼리만 공유. 팀이 없는 플레이어는 공유하지 않음
+mode: server
+
+# 공유할 도전과제
+#   all  : 모든 도전과제 (exclude 목록 제외)
+#   list : advancements 목록에 있는 것만
+scope: all
+
+# scope: list 일 때 공유할 도전과제
+advancements:
+  - minecraft:adventure/adventuring_time
+
+# scope: all 일 때 제외할 도전과제
+exclude: []
+
+# 레시피 해금용 숨은 도전과제(minecraft:recipes/...)도 공유할지
+include-recipes: false
+
+# 진행 상황을 확인하는 주기 (틱, 20틱 = 1초)
+# Paper 1.13.2+ / Spigot 26.3+ 에서는 이벤트로 즉시 공유하므로 사용하지 않음.
+# 그보다 오래된 Spigot에서만 이 주기로 확인함.
+check-interval-ticks: 20
+
+# 저장 주기 (초)
+save-interval-seconds: 60
