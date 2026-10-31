@@ -1,5 +1,7 @@
 package com.sugar_tree.advancementshare;
 
+import com.sugar_tree.advancementshare.hook.ProgressHook;
+import com.sugar_tree.advancementshare.hook.ProgressHooks;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.advancement.Advancement;
@@ -29,7 +31,8 @@ import java.util.logging.Level;
  * Example: A visits 20 biomes and B visits 36 others -> both end up with all 56.
  *
  * When a player earns a criterion, a grant event hands it to the rest of their group.
- * The event is Paper 1.13.2+ or Spigot 26.3+; on older Spigot we fall back to polling.
+ * The event is Paper 1.13.2+ or Spigot 26.3+. Without it, a version-specific hook into
+ * server internals reports changes (see hook package); with neither, we fall back to polling.
  */
 public final class AdvancementShare extends JavaPlugin {
 
@@ -40,6 +43,7 @@ public final class AdvancementShare extends JavaPlugin {
 
     private ProgressStore store;
     private boolean eventDriven;
+    private ProgressHook hook;
     private BukkitTask pollTask;
     private BukkitTask saveTask;
 
@@ -64,15 +68,32 @@ public final class AdvancementShare extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new Listeners(this), this);
         eventDriven = registerCriterionEvent();
         if (!eventDriven) {
-            getLogger().warning("No criterion grant event on this server (needs Paper 1.13.2+ or Spigot 26.3+). "
-                    + "Falling back to checking progress every check-interval-ticks.");
+            hook = ProgressHooks.create(this, this::shareProgress, getLogger());
+            if (hook != null) {
+                getLogger().info("Sharing via server hook for " + Bukkit.getBukkitVersion());
+            } else {
+                getLogger().warning("No criterion grant event or server hook for " + Bukkit.getBukkitVersion()
+                        + ". Falling back to checking progress every check-interval-ticks.");
+            }
         }
         loadSettings();
-        for (Player player : getServer().getOnlinePlayers()) merge(player); // /reload with players online
+        for (Player player : getServer().getOnlinePlayers()) { // /reload with players online
+            injectHook(player);
+            merge(player);
+        }
     }
 
     @Override
     public void onDisable() {
+        if (hook != null) {
+            for (Player player : getServer().getOnlinePlayers()) {
+                try {
+                    hook.eject(player);
+                } catch (ReflectiveOperationException | RuntimeException e) {
+                    getLogger().log(Level.WARNING, "Could not remove hook from " + player.getName(), e);
+                }
+            }
+        }
         if (store == null) return;
         try {
             store.save();
@@ -127,6 +148,18 @@ public final class AdvancementShare extends JavaPlugin {
         return false;
     }
 
+    /** Start watching a player's progress, if this server uses a hook. Falls back to polling if it fails. */
+    public void injectHook(Player player) {
+        if (hook == null) return;
+        try {
+            hook.inject(player);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            getLogger().log(Level.SEVERE, "Server hook failed, falling back to polling", e);
+            hook = null;
+            loadSettings();
+        }
+    }
+
     private void loadSettings() {
         reloadConfig();
         FileConfiguration config = getConfig();
@@ -138,7 +171,7 @@ public final class AdvancementShare extends JavaPlugin {
 
         if (pollTask != null) pollTask.cancel();
         if (saveTask != null) saveTask.cancel();
-        if (!eventDriven) {
+        if (!eventDriven && hook == null) {
             long checkTicks = Math.max(1, config.getLong("check-interval-ticks", 20));
             pollTask = getServer().getScheduler().runTaskTimer(this, () -> {
                 for (Player player : getServer().getOnlinePlayers()) merge(player);
@@ -177,9 +210,17 @@ public final class AdvancementShare extends JavaPlugin {
 
     /**
      * One criterion earned by one player: record it and give it to the rest of the group.
-     * Awarding fires the grant event again for each receiver, but the store already has
-     * the criterion, so store.add returns false and the chain stops there.
+     * Awarding fires the grant event (or hook) again for each receiver, but the store already
+     * has the criterion, so store.add returns false and the chain stops there.
      */
+    /** Something changed on this advancement for this player (hook path): share whatever they have. */
+    public void shareProgress(Player player, Advancement advancement) {
+        if (!isShared(advancement)) return;
+        for (String criterion : player.getAdvancementProgress(advancement).getAwardedCriteria()) {
+            share(player, advancement, criterion);
+        }
+    }
+
     public void share(Player player, Advancement advancement, String criterion) {
         if (!isShared(advancement)) return;
         String group = groupOf(player);

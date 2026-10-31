@@ -17,6 +17,7 @@ public class Listeners implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        plugin.injectHook(player);
         // One tick later so the player's advancement data is fully loaded.
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             if (player.isOnline()) plugin.merge(player);
