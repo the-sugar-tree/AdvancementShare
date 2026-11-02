@@ -1,0 +1,9 @@
+dependencies {
+    compileOnly("org.spigotmc:spigot-api:1.13-R0.1-SNAPSHOT") {
+        exclude group: 'net.md-5', module: 'bungeecord-chat'
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release.set(8)
+}

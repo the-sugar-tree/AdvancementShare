@@ -1,0 +1,13 @@
+dependencies {
+    compileOnly project(':hook:api')
+    // Server jar from BuildTools (mavenLocal), with its libraries: javac needs them to read the server classes
+    compileOnly 'org.spigotmc:spigot:26.2-R0.1-SNAPSHOT'
+}
+
+java {
+    disableAutoTargetJvm()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release.set(25)
+}

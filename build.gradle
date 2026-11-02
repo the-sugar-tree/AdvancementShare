@@ -2,15 +2,21 @@ plugins {
     id 'java'
 }
 
-group = 'com.sugar_tree'
-version = '1.0-dev'
+allprojects {
+    group = 'com.sugar_tree'
+    version = '1.0-dev'
+}
 
-repositories {
-    mavenCentral()
-    maven {
-        name = 'spigotmc-repo'
-        url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+subprojects {
+    apply plugin: 'java'
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
     }
+}
+
+java {
+    // Hook modules target newer Java than the plugin itself; each is only loaded on its own server version.
+    disableAutoTargetJvm()
 }
 
 dependencies {
@@ -20,11 +26,19 @@ dependencies {
         // Old bungeecord-chat snapshot is no longer hosted, and this plugin doesn't use it
         exclude group: 'net.md-5', module: 'bungeecord-chat'
     }
+    compileOnly project(':hook:api')
+    compileOnly project(':hook:spigot-26.2')
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release.set(8)
+}
+
+jar {
+    // Bundle the hook modules' classes into the plugin jar
+    from(project(':hook:api').sourceSets.main.output)
+    from(project(':hook:spigot-26.2').sourceSets.main.output)
 }
 
 processResources {

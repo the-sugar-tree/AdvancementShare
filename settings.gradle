@@ -1,1 +1,29 @@
 rootProject.name = 'AdvancementShare'
+
+// Version-specific hooks into server internals, compiled against that version's server jar
+// and bundled into the plugin jar. Each one is only loaded on its own version.
+include 'hook:api'
+include 'hook:spigot-26.2'
+
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'spigotmc-repo'
+            url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+        }
+        // Mojang libraries the server jar depends on (authlib, brigadier, datafixerupper, ...)
+        maven {
+            name = 'minecraft-libraries'
+            url = 'https://libraries.minecraft.net/'
+            content { includeGroup('com.mojang') }
+        }
+        // Server jars (org.spigotmc:spigot) are installed here by BuildTools
+        mavenLocal {
+            content {
+                includeModule('org.spigotmc', 'spigot')
+                includeModule('org.spigotmc', 'spigot-parent')
+            }
+        }
+    }
+}
