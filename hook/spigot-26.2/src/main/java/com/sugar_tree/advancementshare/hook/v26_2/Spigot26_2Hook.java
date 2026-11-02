@@ -3,6 +3,7 @@ package com.sugar_tree.advancementshare.hook.v26_2;
 import com.sugar_tree.advancementshare.hook.ProgressHook;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.server.PlayerAdvancements;
+import net.minecraft.server.level.ServerPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
@@ -10,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,6 +51,17 @@ public final class Spigot26_2Hook implements ProgressHook {
             throw new NoSuchFieldException("progressChanged is " + progressChanged.getType().getName() + ", expected Set");
         }
         progressChanged.setAccessible(true); // final instance field: writable once accessible
+        // Direct calls link lazily on first use, so check them now and let create() fall back to polling.
+        requireMethod(CraftPlayer.class, "getHandle", ServerPlayer.class);
+        requireMethod(ServerPlayer.class, "getAdvancements", PlayerAdvancements.class);
+        requireMethod(AdvancementHolder.class, "toBukkit", Advancement.class);
+    }
+
+    private static void requireMethod(Class<?> owner, String name, Class<?> returnType) throws NoSuchMethodException {
+        for (Method method : owner.getMethods()) {
+            if (method.getName().equals(name) && method.getParameterCount() == 0 && method.getReturnType() == returnType) return;
+        }
+        throw new NoSuchMethodException(owner.getName() + "." + name + "() returning " + returnType.getName());
     }
 
     @Override
