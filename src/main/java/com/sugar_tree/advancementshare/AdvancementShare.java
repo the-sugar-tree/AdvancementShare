@@ -89,7 +89,7 @@ public final class AdvancementShare extends JavaPlugin {
             for (Player player : getServer().getOnlinePlayers()) {
                 try {
                     hook.eject(player);
-                } catch (ReflectiveOperationException | RuntimeException e) {
+                } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
                     getLogger().log(Level.WARNING, "Could not remove hook from " + player.getName(), e);
                 }
             }
@@ -153,7 +153,9 @@ public final class AdvancementShare extends JavaPlugin {
         if (hook == null) return;
         try {
             hook.inject(player);
-        } catch (ReflectiveOperationException | RuntimeException e) {
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            // LinkageError: the hook was compiled against server members this build doesn't have,
+            // resolved lazily on first use (e.g. CraftPlayer.getHandle, ServerPlayer.getAdvancements)
             getLogger().log(Level.SEVERE, "Server hook failed, falling back to polling", e);
             hook = null;
             loadSettings();
