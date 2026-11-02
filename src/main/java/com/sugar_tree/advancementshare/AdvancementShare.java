@@ -85,15 +85,7 @@ public final class AdvancementShare extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if (hook != null) {
-            for (Player player : getServer().getOnlinePlayers()) {
-                try {
-                    hook.eject(player);
-                } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
-                    getLogger().log(Level.WARNING, "Could not remove hook from " + player.getName(), e);
-                }
-            }
-        }
+        ejectHook();
         if (store == null) return;
         try {
             store.save();
@@ -157,9 +149,22 @@ public final class AdvancementShare extends JavaPlugin {
             // LinkageError: the hook was compiled against server members this build doesn't have,
             // resolved lazily on first use (e.g. CraftPlayer.getHandle, ServerPlayer.getAdvancements)
             getLogger().log(Level.SEVERE, "Server hook failed, falling back to polling", e);
-            hook = null;
+            ejectHook(); // players injected before this one would otherwise keep the hook until they rejoin
             loadSettings();
         }
+    }
+
+    /** Put the server's own objects back for every online player and stop using the hook. */
+    private void ejectHook() {
+        if (hook == null) return;
+        for (Player player : getServer().getOnlinePlayers()) {
+            try {
+                hook.eject(player);
+            } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+                getLogger().log(Level.WARNING, "Could not remove hook from " + player.getName(), e);
+            }
+        }
+        hook = null;
     }
 
     private void loadSettings() {
